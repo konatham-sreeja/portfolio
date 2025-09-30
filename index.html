@@ -61,11 +61,11 @@
 
 <script>
 const container = document.getElementById("container");
-const totalPages = 200; // <-- set to your total number of pages
+const totalPages = 53; // <-- set to your total number of pages
 
 // Directly load all images
 for (let i = 1; i <= totalPages; i++) {
-  const num = String(i).padStart(3, '0'); // adjust to your filename format
+  const num = String(i); // adjust to your filename format
   const img = document.createElement("img");
   img.src = `page-${num}.png`; // directly set src
   img.alt = `Page ${i}`;
