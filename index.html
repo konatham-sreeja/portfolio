@@ -66,9 +66,9 @@ const container = document.getElementById("container");
 const totalPages = 200; // <-- change to your actual total pages
 const images = [];
 
-// Create all img elements with data-src
+// Create all img elements without src
 for (let i = 1; i <= totalPages; i++) {
-  const num = String(i).padStart(3,'0'); // adjust if your filenames are page-001.png etc.
+  const num = String(i).padStart(3,'0'); // adjust to your filenames
   const img = document.createElement("img");
   img.dataset.src = `page-${num}.png`;
   img.alt = `Page ${i}`;
@@ -84,33 +84,18 @@ function loadImage(img) {
   }
 }
 
-// Load first few images immediately (priority)
-const initialLoad = 5;
-for (let i = 0; i < initialLoad && i < images.length; i++) {
-  loadImage(images[i]);
+// Sequential priority loading
+let currentIndex = 0;
+function loadNextImage() {
+  if (currentIndex >= images.length) return;
+  loadImage(images[currentIndex]);
+  currentIndex++;
+  // load next image after a short delay to allow progressive loading
+  setTimeout(loadNextImage, 50); // adjust delay (ms) for faster/slower loading
 }
 
-// Load images near viewport as user scrolls
-function loadImagesInView() {
-  const buffer = 3; // how many images above/below viewport to preload
-  const scrollTop = window.scrollY;
-  const windowHeight = window.innerHeight;
-
-  images.forEach((img) => {
-    const imgTop = img.offsetTop;
-    const imgBottom = img.offsetTop + img.height;
-    if ((imgTop < scrollTop + windowHeight * (1 + buffer/5)) && 
-        (imgBottom > scrollTop - windowHeight * (buffer/5))) {
-      loadImage(img);
-    }
-  });
-}
-
-// Initial viewport check
-loadImagesInView();
-
-// Scroll listener
-window.addEventListener("scroll", loadImagesInView);
+// Start sequential loading
+loadNextImage();
 
 // Navigation buttons
 const upBtn = document.getElementById("upBtn");
@@ -119,12 +104,12 @@ const downBtn = document.getElementById("downBtn");
 function scrollByPage(direction) {
   const scrollPos = window.scrollY;
   const imgs = [...images];
-  let currentIndex = imgs.findIndex(img =>
+  let index = imgs.findIndex(img =>
     img.offsetTop + img.height > scrollPos + 50
   );
-  if (currentIndex === -1) currentIndex = imgs.length - 1;
+  if (index === -1) index = imgs.length - 1;
 
-  let newIndex = direction === "down" ? currentIndex + 1 : currentIndex - 1;
+  let newIndex = direction === "down" ? index + 1 : index - 1;
   if (newIndex < 0) newIndex = 0;
   if (newIndex >= imgs.length) newIndex = imgs.length - 1;
 
