@@ -1,92 +1,104 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>My Portfolio</title>
-  <style>
-    body { margin: 0; background: #111; font-family: sans-serif; }
-    img { display: block; width: 100%; margin: 0 auto; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Portfolio</title>
+<style>
+  body { 
+    margin: 0; 
+    background: #111; 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+  }
 
-    /* Navigation arrows */
+  img { 
+    display: block; 
+    width: 100%; 
+    max-width: 900px; /* desktop max width */
+    height: auto; 
+    margin: 0 auto; 
+  }
+
+  /* Navigation buttons hidden by default (mobile-first) */
+  .nav-btn { display: none; }
+
+  /* Show buttons on desktop only */
+  @media (min-width: 768px) {
     .nav-btn {
+      display: flex;
+      justify-content: center;
+      align-items: center;
       position: fixed;
-      right: 20px;
-      padding: 10px 15px;
-      background: rgba(255,255,255,0.8);
+      right: 30px;
+      width: 50px;
+      height: 50px;
+      background: rgba(255,255,255,0.85);
       border-radius: 50%;
       cursor: pointer;
-      font-size: 20px;
+      font-size: 24px;
+      font-weight: bold;
+      color: #333;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
       user-select: none;
-      transition: background 0.3s;
+      transition: transform 0.2s, background 0.2s;
       z-index: 999;
     }
-    .nav-btn:hover { background: white; }
-    #upBtn { bottom: 80px; }
-    #downBtn { bottom: 20px; }
-  </style>
+    .nav-btn:hover { background: white; transform: scale(1.1); }
+    #upBtn { bottom: 90px; }
+    #downBtn { bottom: 30px; }
+  }
+</style>
 </head>
 <body>
-  <div id="container"></div>
 
-  <!-- Navigation buttons -->
-  <div id="upBtn" class="nav-btn">⬆</div>
-  <div id="downBtn" class="nav-btn">⬇</div>
+<div id="container"></div>
 
-  <script>
-    const container = document.getElementById("container");
+<!-- Navigation buttons -->
+<div id="upBtn" class="nav-btn">⬆</div>
+<div id="downBtn" class="nav-btn">⬇</div>
 
-    // Change this number to the total pages you exported
-    const totalPages = 53;  
-    const images = [];
+<script>
+const container = document.getElementById("container");
+const totalPages = 53; // <-- set to your total number of pages
 
-    // Create all <img> tags with lazy loading
-    for (let i = 1; i <= totalPages; i++) {
-      const img = document.createElement("img");
-      img.setAttribute("data-src", `page-${i}.png`);
-      img.alt = `Page ${i}`;
-      img.loading = "lazy"; // native browser lazy-loading
-      container.appendChild(img);
-      images.push(img);
-    }
+// Directly load all images
+for (let i = 1; i <= totalPages; i++) {
+  const num = String(i); // adjust to your filename format
+  const img = document.createElement("img");
+  img.src = `page-${num}.png`; // directly set src
+  img.alt = `Page ${i}`;
+  container.appendChild(img);
+}
 
-    // IntersectionObserver for smarter lazy loading
-    const observer = new IntersectionObserver((entries, obs) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          const img = entry.target;
-          img.src = img.dataset.src;
-          obs.unobserve(img);
-        }
-      });
-    });
+// Navigation buttons
+const images = [...container.getElementsByTagName("img")];
+const upBtn = document.getElementById("upBtn");
+const downBtn = document.getElementById("downBtn");
 
-    images.forEach(img => observer.observe(img));
+function scrollByPage(direction) {
+  const scrollPos = window.scrollY;
+  let index = images.findIndex(img =>
+    img.offsetTop + img.height > scrollPos + 50
+  );
+  if (index === -1) index = images.length - 1;
 
-    // Navigation buttons
-    const upBtn = document.getElementById("upBtn");
-    const downBtn = document.getElementById("downBtn");
+  let newIndex = direction === "down" ? index + 1 : index - 1;
+  if (newIndex < 0) newIndex = 0;
+  if (newIndex >= images.length) newIndex = images.length - 1;
 
-    function scrollByPage(direction) {
-      const scrollPos = window.scrollY;
-      const windowHeight = window.innerHeight;
+  images[newIndex].scrollIntoView({ behavior: "smooth" });
+}
 
-      // Find the nearest image in view
-      const imgs = [...images];
-      let currentIndex = imgs.findIndex(img =>
-        img.offsetTop + img.height > scrollPos + 50
-      );
+upBtn.addEventListener("click", () => scrollByPage("up"));
+downBtn.addEventListener("click", () => scrollByPage("down"));
 
-      if (currentIndex === -1) currentIndex = imgs.length - 1;
-
-      let newIndex = direction === "down" ? currentIndex + 1 : currentIndex - 1;
-      if (newIndex < 0) newIndex = 0;
-      if (newIndex >= imgs.length) newIndex = imgs.length - 1;
-
-      imgs[newIndex].scrollIntoView({ behavior: "smooth" });
-    }
-
-    upBtn.addEventListener("click", () => scrollByPage("up"));
-    downBtn.addEventListener("click", () => scrollByPage("down"));
-  </script>
+// Keyboard navigation
+document.addEventListener("keydown", (e) => {
+  if (e.key === "ArrowUp") { scrollByPage("up"); e.preventDefault(); }
+  if (e.key === "ArrowDown") { scrollByPage("down"); e.preventDefault(); }
+});
+</script>
 </body>
 </html>
