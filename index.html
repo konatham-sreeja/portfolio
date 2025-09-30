@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>My Portfolio</title>
+  <style>
+    body { margin: 0; background: #111; font-family: sans-serif; }
+    img { display: block; width: 100%; margin: 0 auto; }
+
+    /* Navigation arrows */
+    .nav-btn {
+      position: fixed;
+      right: 20px;
+      padding: 10px 15px;
+      background: rgba(255,255,255,0.8);
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 20px;
+      user-select: none;
+      transition: background 0.3s;
+      z-index: 999;
+    }
+    .nav-btn:hover { background: white; }
+    #upBtn { bottom: 80px; }
+    #downBtn { bottom: 20px; }
+  </style>
+</head>
+<body>
+  <div id="container"></div>
+
+  <!-- Navigation buttons -->
+  <div id="upBtn" class="nav-btn">⬆</div>
+  <div id="downBtn" class="nav-btn">⬇</div>
+
+  <script>
+    const container = document.getElementById("container");
+
+    // Change this number to the total pages you exported
+    const totalPages = 200;  
+    const images = [];
+
+    // Create all <img> tags with lazy loading
+    for (let i = 1; i <= totalPages; i++) {
+      const img = document.createElement("img");
+      img.setAttribute("data-src", `page-${i}.png`);
+      img.alt = `Page ${i}`;
+      img.loading = "lazy"; // native browser lazy-loading
+      container.appendChild(img);
+      images.push(img);
+    }
+
+    // IntersectionObserver for smarter lazy loading
+    const observer = new IntersectionObserver((entries, obs) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const img = entry.target;
+          img.src = img.dataset.src;
+          obs.unobserve(img);
+        }
+      });
+    });
+
+    images.forEach(img => observer.observe(img));
+
+    // Navigation buttons
+    const upBtn = document.getElementById("upBtn");
+    const downBtn = document.getElementById("downBtn");
+
+    function scrollByPage(direction) {
+      const scrollPos = window.scrollY;
+      const windowHeight = window.innerHeight;
+
+      // Find the nearest image in view
+      const imgs = [...images];
+      let currentIndex = imgs.findIndex(img =>
+        img.offsetTop + img.height > scrollPos + 50
+      );
+
+      if (currentIndex === -1) currentIndex = imgs.length - 1;
+
+      let newIndex = direction === "down" ? currentIndex + 1 : currentIndex - 1;
+      if (newIndex < 0) newIndex = 0;
+      if (newIndex >= imgs.length) newIndex = imgs.length - 1;
+
+      imgs[newIndex].scrollIntoView({ behavior: "smooth" });
+    }
+
+    upBtn.addEventListener("click", () => scrollByPage("up"));
+    downBtn.addEventListener("click", () => scrollByPage("down"));
+  </script>
+</body>
+</html>
