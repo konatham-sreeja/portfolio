@@ -19,8 +19,6 @@
     max-width: 900px; /* desktop max width */
     height: auto; 
     margin: 0 auto; 
-    opacity: 0; /* fade-in */
-    transition: opacity 0.5s ease;
   }
 
   /* Navigation buttons hidden by default (mobile-first) */
@@ -63,57 +61,34 @@
 
 <script>
 const container = document.getElementById("container");
-const totalPages = 200; // <-- change to your actual total pages
-const images = [];
+const totalPages = 200; // <-- set to your total number of pages
 
-// Create all img elements without src
+// Directly load all images
 for (let i = 1; i <= totalPages; i++) {
-  const num = String(i).padStart(3,'0'); // adjust to your filenames
+  const num = String(i).padStart(3, '0'); // adjust to your filename format
   const img = document.createElement("img");
-  img.dataset.src = `page-${num}.png`;
+  img.src = `page-${num}.png`; // directly set src
   img.alt = `Page ${i}`;
   container.appendChild(img);
-  images.push(img);
 }
-
-// Function to load an image
-function loadImage(img) {
-  if (!img.src) {
-    img.src = img.dataset.src;
-    img.onload = () => img.style.opacity = 1;
-  }
-}
-
-// Sequential priority loading
-let currentIndex = 0;
-function loadNextImage() {
-  if (currentIndex >= images.length) return;
-  loadImage(images[currentIndex]);
-  currentIndex++;
-  // load next image after a short delay to allow progressive loading
-  setTimeout(loadNextImage, 50); // adjust delay (ms) for faster/slower loading
-}
-
-// Start sequential loading
-loadNextImage();
 
 // Navigation buttons
+const images = [...container.getElementsByTagName("img")];
 const upBtn = document.getElementById("upBtn");
 const downBtn = document.getElementById("downBtn");
 
 function scrollByPage(direction) {
   const scrollPos = window.scrollY;
-  const imgs = [...images];
-  let index = imgs.findIndex(img =>
+  let index = images.findIndex(img =>
     img.offsetTop + img.height > scrollPos + 50
   );
-  if (index === -1) index = imgs.length - 1;
+  if (index === -1) index = images.length - 1;
 
   let newIndex = direction === "down" ? index + 1 : index - 1;
   if (newIndex < 0) newIndex = 0;
-  if (newIndex >= imgs.length) newIndex = imgs.length - 1;
+  if (newIndex >= images.length) newIndex = images.length - 1;
 
-  imgs[newIndex].scrollIntoView({ behavior: "smooth" });
+  images[newIndex].scrollIntoView({ behavior: "smooth" });
 }
 
 upBtn.addEventListener("click", () => scrollByPage("up"));
