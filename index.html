@@ -3,102 +3,274 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>My Portfolio</title>
+<title>Konatham Sreeja — Portfolio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Tenor+Sans&display=swap" rel="stylesheet">
+
 <style>
-  body { 
-    margin: 0; 
-    background: #111; 
-    display: flex; 
-    flex-direction: column; 
-    align-items: center; 
+  :root {
+    --bg:         #080808;
+    --border:     #2a2a2a;
+    --gold:       #c9a96e;
+    --gold-light: #e8cfa0;
+    --text:       #e8e0d5;
+    --muted:      #6b6560;
   }
 
-  img { 
-    display: block; 
-    width: 100%; 
-    max-width: 900px; /* desktop max width */
-    height: auto; 
-    margin: 0 auto; 
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Tenor Sans', sans-serif;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden; /* iframe fills remaining height */
   }
 
-  /* Navigation buttons hidden by default (mobile-first) */
-  .nav-btn { display: none; }
+  /* ── HEADER ── */
+  header {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 32px;
+    height: 62px;
+    background: rgba(8,8,8,0.97);
+    border-bottom: 1px solid var(--border);
+    gap: 16px;
+    z-index: 10;
+  }
 
-  /* Show buttons on desktop only */
-  @media (min-width: 768px) {
-    .nav-btn {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      position: fixed;
-      right: 30px;
-      width: 50px;
-      height: 50px;
-      background: rgba(255,255,255,0.85);
-      border-radius: 50%;
-      cursor: pointer;
-      font-size: 24px;
-      font-weight: bold;
-      color: #333;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-      user-select: none;
-      transition: transform 0.2s, background 0.2s;
-      z-index: 999;
-    }
-    .nav-btn:hover { background: white; transform: scale(1.1); }
-    #upBtn { bottom: 90px; }
-    #downBtn { bottom: 30px; }
+  .brand {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    font-size: 1.1rem;
+    letter-spacing: 0.14em;
+    color: var(--gold-light);
+    text-transform: uppercase;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .brand em {
+    font-style: italic;
+    color: var(--muted);
+    font-size: 0.85em;
+  }
+
+  /* ── TABS ── */
+  nav { display: flex; gap: 4px; align-items: center; }
+
+  .tab {
+    position: relative;
+    padding: 8px 20px;
+    font-family: 'Tenor Sans', sans-serif;
+    font-size: 0.7rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    cursor: pointer;
+    border: 1px solid transparent;
+    border-radius: 2px;
+    transition: color .25s, border-color .25s, background .25s;
+    white-space: nowrap;
+    user-select: none;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active {
+    color: var(--gold);
+    border-color: var(--border);
+    background: rgba(201,169,110,0.06);
+  }
+  .tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px; left: 20%; right: 20%;
+    height: 1px;
+    background: var(--gold);
+  }
+
+  /* ── VIEWER AREA ── */
+  #viewer {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Loading overlay */
+  #loading-overlay {
+    position: absolute;
+    inset: 0;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    z-index: 5;
+    transition: opacity 0.5s;
+    pointer-events: none;
+  }
+  #loading-overlay.hidden { opacity: 0; }
+
+  .loader-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    font-size: 1.3rem;
+    letter-spacing: 0.25em;
+    color: var(--gold-light);
+    text-transform: uppercase;
+  }
+  .bar-wrap {
+    width: 180px; height: 1px;
+    background: var(--border);
+    position: relative; overflow: hidden;
+  }
+  .bar {
+    position: absolute;
+    left: -70%; top: 0; bottom: 0; width: 70%;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    animation: sweep 1.5s ease-in-out infinite;
+  }
+  @keyframes sweep { 0%{left:-70%} 100%{left:110%} }
+
+  .loader-sub {
+    font-size: 0.68rem;
+    letter-spacing: 0.2em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  /* The iframes — all stacked, only active one is visible */
+  .pdf-frame {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.35s;
+    background: var(--bg);
+  }
+  .pdf-frame.active {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  /* ── MOBILE ── */
+  @media (max-width: 640px) {
+    header { padding: 0 14px; height: 54px; gap: 8px; }
+    .brand { font-size: 0.82rem; }
+    .tab { padding: 6px 11px; font-size: 0.62rem; letter-spacing: 0.1em; }
+  }
+  @media (max-width: 380px) {
+    .tab { padding: 5px 8px; font-size: 0.58rem; }
+  }
+
+  footer {
+    flex-shrink: 0;
+    text-align: center;
+    padding: 10px;
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    color: var(--muted);
+    text-transform: uppercase;
+    border-top: 1px solid var(--border);
   }
 </style>
 </head>
 <body>
 
-<div id="container"></div>
+<header>
+  <div class="brand">Konatham Sreeja <em>/ Portfolio</em></div>
+  <nav id="tab-nav">
+    <div class="tab active" data-id="portfolio">Portfolio</div>
+    <div class="tab"        data-id="cyberplay">Cyber Play</div>
+    <div class="tab"        data-id="erosion">Quiet Erosion</div>
+  </nav>
+</header>
 
-<!-- Navigation buttons -->
-<div id="upBtn" class="nav-btn">⬆</div>
-<div id="downBtn" class="nav-btn">⬇</div>
+<div id="viewer">
+
+  <!-- Loading overlay (shared) -->
+  <div id="loading-overlay">
+    <div class="loader-title">Loading</div>
+    <div class="bar-wrap"><div class="bar"></div></div>
+    <div class="loader-sub">Opening document…</div>
+  </div>
+
+  <!--
+    Google Drive /preview URLs render the full Drive viewer inside an iframe.
+    All three frames are created on first load; switching tabs is instant after that.
+  -->
+  <iframe
+    id="frame-portfolio"
+    class="pdf-frame active"
+    src="https://drive.google.com/file/d/1Mp-3eR9jXLrd_3cdHtOIL-Znk_Be5fCQ/preview"
+    allow="autoplay"
+    data-id="portfolio"
+  ></iframe>
+
+  <iframe
+    id="frame-cyberplay"
+    class="pdf-frame"
+    src=""
+    data-src="https://drive.google.com/file/d/13Gh3KXCxzmxQj5xFlYdsy-O00gpGxidY/preview"
+    allow="autoplay"
+    data-id="cyberplay"
+  ></iframe>
+
+  <iframe
+    id="frame-erosion"
+    class="pdf-frame"
+    src=""
+    data-src="https://drive.google.com/file/d/1LAsf4gR3PNsLqjAzO98kN_yRQSOI0DeV/preview"
+    allow="autoplay"
+    data-id="erosion"
+  ></iframe>
+
+</div>
+
+<footer>Konatham Sreeja &nbsp;·&nbsp; Design Portfolio &nbsp;·&nbsp; All Rights Reserved</footer>
 
 <script>
-const container = document.getElementById("container");
-const totalPages = 52; // <-- set to your total number of pages
+  const overlay = document.getElementById('loading-overlay');
+  const tabs    = document.querySelectorAll('.tab');
+  const frames  = document.querySelectorAll('.pdf-frame');
 
-// Directly load all images
-for (let i = 1; i <= totalPages; i++) {
-  const num = String(i); // adjust to your filename format
-  const img = document.createElement("img");
-  img.src = `Konatham Sreeja final portfolio -${num}.png`; // directly set src
-  img.alt = `Page ${i}`;
-  container.appendChild(img);
-}
+  // Hide loading overlay once the first iframe loads
+  const firstFrame = document.getElementById('frame-portfolio');
+  firstFrame.addEventListener('load', () => {
+    overlay.classList.add('hidden');
+  });
 
-// Navigation buttons
-const images = [...container.getElementsByTagName("img")];
-const upBtn = document.getElementById("upBtn");
-const downBtn = document.getElementById("downBtn");
+  // Tab switching
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const id = tab.dataset.id;
 
-function scrollByPage(direction) {
-  const scrollPos = window.scrollY;
-  let index = images.findIndex(img =>
-    img.offsetTop + img.height > scrollPos + 50
-  );
-  if (index === -1) index = images.length - 1;
+      // Update active tab
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
 
-  let newIndex = direction === "down" ? index + 1 : index - 1;
-  if (newIndex < 0) newIndex = 0;
-  if (newIndex >= images.length) newIndex = images.length - 1;
+      // Lazy-load iframe src on first visit
+      const targetFrame = document.querySelector(`.pdf-frame[data-id="${id}"]`);
+      if (!targetFrame.src || targetFrame.src === window.location.href) {
+        overlay.classList.remove('hidden');
+        targetFrame.src = targetFrame.dataset.src;
+        targetFrame.addEventListener('load', () => {
+          overlay.classList.add('hidden');
+        }, { once: true });
+      }
 
-  images[newIndex].scrollIntoView({ behavior: "smooth" });
-}
-
-upBtn.addEventListener("click", () => scrollByPage("up"));
-downBtn.addEventListener("click", () => scrollByPage("down"));
-
-// Keyboard navigation
-document.addEventListener("keydown", (e) => {
-  if (e.key === "ArrowUp") { scrollByPage("up"); e.preventDefault(); }
-  if (e.key === "ArrowDown") { scrollByPage("down"); e.preventDefault(); }
-});
+      // Show target frame, hide others
+      frames.forEach(f => f.classList.remove('active'));
+      targetFrame.classList.add('active');
+    });
+  });
 </script>
 </body>
 </html>
