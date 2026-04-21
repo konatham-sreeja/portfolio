@@ -16,6 +16,7 @@
     --text:       #e8e0d5;
     --muted:      #6b6560;
     --header-h:   62px;
+    --next-bar-h: 52px;
   }
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -44,7 +45,6 @@
     gap: 16px;
     z-index: 10;
   }
-
   .brand {
     font-family: 'Cormorant Garamond', serif;
     font-weight: 300;
@@ -57,9 +57,7 @@
   }
   .brand em { font-style: italic; color: var(--muted); font-size: 0.85em; }
 
-  /* ── TABS ── */
   nav { display: flex; gap: 4px; align-items: center; }
-
   .tab {
     position: relative;
     padding: 8px 20px;
@@ -88,21 +86,20 @@
     background: var(--gold);
   }
 
-  /* ── VIEWER AREA ── */
+  /* ── VIEWER ── */
   #viewer {
     flex: 1;
     position: relative;
     overflow: hidden;
   }
 
-  /* ── PANELS (one per tab) ── */
+  /* ── PANELS ── */
   .panel {
     position: absolute;
     inset: 0;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.35s;
-    overflow-y: auto;        /* scroll through stacked iframes */
     background: var(--bg);
   }
   .panel.active {
@@ -110,27 +107,51 @@
     pointer-events: all;
   }
 
-  /* ── SINGLE-FRAME PANELS (Cyber Play, Quiet Erosion) ── */
+  /* Single-frame panels (Cyber Play, Quiet Erosion) */
+  .panel-single {
+    overflow: hidden;
+  }
   .panel-single iframe {
     display: block;
     width: 100%;
     height: 100%;
     border: none;
   }
-  .panel-single {
-    overflow: hidden; /* no scroll needed — Drive viewer scrolls internally */
+
+  /* ── PORTFOLIO MULTI-PART PANEL ── */
+  /* Outer scroll container */
+  #panel-portfolio {
+    overflow-y: scroll;
+    scroll-behavior: smooth;
+    scroll-snap-type: y mandatory;
   }
 
-  /* ── MULTI-FRAME PANEL (Portfolio split into parts) ── */
+  /*
+   * Each part = iframe filling viewport + a "next" bar underneath.
+   * The scroll-snap snaps to each part-block top.
+   * The "next" bar sits below the iframe — when the user scrolls past
+   * the iframe (by dragging the scrollbar, swiping on mobile, or clicking
+   * the next-bar), the outer panel scrolls and IntersectionObserver
+   * auto-snaps to the next block.
+   */
   .part-block {
-    position: relative;
-    width: 100%;
-    /* Each part fills the viewport height so it feels like a full viewer */
+    /* iframe height + next-bar height = one scroll unit */
     height: calc(100vh - var(--header-h));
-    border-bottom: 2px solid var(--border);
-    background: var(--bg);
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    position: relative;
+    display: flex;
+    flex-direction: column;
   }
-  .part-block iframe {
+  /* Last part has no next-bar */
+  .part-block:last-child { height: calc(100vh - var(--header-h)); }
+
+  .part-iframe-wrap {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+  .part-iframe-wrap iframe {
     display: block;
     width: 100%;
     height: 100%;
@@ -138,9 +159,9 @@
     opacity: 0;
     transition: opacity 0.4s;
   }
-  .part-block iframe.loaded { opacity: 1; }
+  .part-iframe-wrap iframe.loaded { opacity: 1; }
 
-  /* Part label pill */
+  /* Part label (top-center) */
   .part-label {
     position: absolute;
     top: 10px; left: 50%;
@@ -159,7 +180,76 @@
     backdrop-filter: blur(6px);
   }
 
-  /* Loading overlay */
+  /* ── NEXT-PART BAR ── */
+  /*
+   * Sits BELOW the iframe inside the same part-block flex column.
+   * Clicking it scrolls to the next part. It's always visible at the
+   * bottom when the user scrolls the outer panel past the iframe edge.
+   * On desktop it's also accessible via the scrollbar.
+   */
+  .next-bar {
+    flex-shrink: 0;
+    height: var(--next-bar-h);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    cursor: pointer;
+    background: #0e0e0e;
+    border-top: 1px solid var(--border);
+    user-select: none;
+    transition: background 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .next-bar::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(201,169,110,0.06) 50%, transparent 100%);
+    transform: translateX(-100%);
+    transition: transform 0s;
+  }
+  .next-bar:hover::before {
+    transform: translateX(100%);
+    transition: transform 0.6s ease;
+  }
+  .next-bar:hover { background: #131313; }
+
+  .next-bar-text {
+    font-size: 0.68rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted);
+    transition: color 0.2s;
+  }
+  .next-bar:hover .next-bar-text { color: var(--gold); }
+
+  .next-bar-arrow {
+    font-size: 1rem;
+    color: var(--muted);
+    transition: color 0.2s, transform 0.2s;
+    animation: bounce 2s ease-in-out infinite;
+  }
+  .next-bar:hover .next-bar-arrow {
+    color: var(--gold);
+    animation: none;
+    transform: translateY(3px);
+  }
+  @keyframes bounce {
+    0%,100% { transform: translateY(0); }
+    50%      { transform: translateY(4px); }
+  }
+
+  /* Sentinel — a 1px div right above the next-bar.
+     When it enters the viewport, we auto-snap to the next part. */
+  .sentinel {
+    height: 1px;
+    width: 100%;
+    pointer-events: none;
+  }
+
+  /* ── LOADING OVERLAY ── */
   #loading-overlay {
     position: absolute;
     inset: 0;
@@ -195,8 +285,7 @@
     animation: sweep 1.5s ease-in-out infinite;
   }
   @keyframes sweep { 0%{left:-70%} 100%{left:110%} }
-
-  .loader-sub {
+  #loader-sub {
     font-size: 0.68rem;
     letter-spacing: 0.2em;
     color: var(--muted);
@@ -239,55 +328,78 @@
 
 <div id="viewer">
 
-  <!-- Loading overlay -->
   <div id="loading-overlay">
     <div class="loader-title">Loading</div>
     <div class="bar-wrap"><div class="bar"></div></div>
-    <div class="loader-sub" id="loader-sub">Opening document…</div>
+    <div id="loader-sub">Opening document…</div>
   </div>
 
-  <!-- ══ PORTFOLIO PANEL — 4 stacked parts ══
-       After running split_portfolio.py, upload the 4 files to Google Drive,
-       set each to "Anyone with the link", and replace the FILE_ID placeholders below.
-  -->
+  <!-- ══ PORTFOLIO: 4 scroll-snapped parts ══ -->
   <div class="panel active" id="panel-portfolio">
 
-    <div class="part-block">
-      <div class="part-label">Part 1 of 4</div>
-      <iframe
-        data-src="https://drive.google.com/file/d/1gFfeq11BT0VsBeSKQV2kX4XJYa1-Q-fB/preview"
-        allow="autoplay"
-      ></iframe>
+    <!-- Part 1 -->
+    <div class="part-block" id="part-1">
+      <div class="part-iframe-wrap">
+        <div class="part-label">Part 1 of 4</div>
+        <iframe
+          data-src="https://drive.google.com/file/d/1gFfeq11BT0VsBeSKQV2kX4XJYa1-Q-fB/preview"
+          allow="autoplay"
+        ></iframe>
+      </div>
+      <div class="sentinel" data-next="part-2"></div>
+      <div class="next-bar" data-next="part-2">
+        <span class="next-bar-text">Continue to Part 2</span>
+        <span class="next-bar-arrow">↓</span>
+      </div>
     </div>
 
-    <div class="part-block">
-      <div class="part-label">Part 2 of 4</div>
-      <iframe
-        data-src="https://drive.google.com/file/d/13ZkiP1NUqZ92DYSBw9wX8gmH3ag73KQq/preview"
-        allow="autoplay"
-      ></iframe>
+    <!-- Part 2 -->
+    <div class="part-block" id="part-2">
+      <div class="part-iframe-wrap">
+        <div class="part-label">Part 2 of 4</div>
+        <iframe
+          data-src="https://drive.google.com/file/d/13ZkiP1NUqZ92DYSBw9wX8gmH3ag73KQq/preview"
+          allow="autoplay"
+        ></iframe>
+      </div>
+      <div class="sentinel" data-next="part-3"></div>
+      <div class="next-bar" data-next="part-3">
+        <span class="next-bar-text">Continue to Part 3</span>
+        <span class="next-bar-arrow">↓</span>
+      </div>
     </div>
 
-    <div class="part-block">
-      <div class="part-label">Part 3 of 4</div>
-      <iframe
-        data-src="https://drive.google.com/file/d/1rSdtPft_QASdS5xeFaWIM_joQWxizC50/preview"
-        allow="autoplay"
-      ></iframe>
+    <!-- Part 3 -->
+    <div class="part-block" id="part-3">
+      <div class="part-iframe-wrap">
+        <div class="part-label">Part 3 of 4</div>
+        <iframe
+          data-src="https://drive.google.com/file/d/1rSdtPft_QASdS5xeFaWIM_joQWxizC50/preview"
+          allow="autoplay"
+        ></iframe>
+      </div>
+      <div class="sentinel" data-next="part-4"></div>
+      <div class="next-bar" data-next="part-4">
+        <span class="next-bar-text">Continue to Part 4</span>
+        <span class="next-bar-arrow">↓</span>
+      </div>
     </div>
 
-    <div class="part-block">
-      <div class="part-label">Part 4 of 4</div>
-      <iframe
-        data-src="https://drive.google.com/file/d/1SGJTY9diIIhyGtmFmObjGQp3kaaRcVIF/preview"
-        allow="autoplay"
-      ></iframe>
+    <!-- Part 4 (no next-bar) -->
+    <div class="part-block" id="part-4">
+      <div class="part-iframe-wrap">
+        <div class="part-label">Part 4 of 4</div>
+        <iframe
+          data-src="https://drive.google.com/file/d/1SGJTY9diIIhyGtmFmObjGQp3kaaRcVIF/preview"
+          allow="autoplay"
+        ></iframe>
+      </div>
     </div>
 
   </div><!-- /panel-portfolio -->
 
 
-  <!-- ══ CYBER PLAY — single viewer ══ -->
+  <!-- ══ CYBER PLAY ══ -->
   <div class="panel panel-single" id="panel-cyberplay">
     <iframe
       data-src="https://drive.google.com/file/d/13Gh3KXCxzmxQj5xFlYdsy-O00gpGxidY/preview"
@@ -296,7 +408,7 @@
   </div>
 
 
-  <!-- ══ QUIET EROSION — single viewer ══ -->
+  <!-- ══ QUIET EROSION ══ -->
   <div class="panel panel-single" id="panel-erosion">
     <iframe
       data-src="https://drive.google.com/file/d/1LAsf4gR3PNsLqjAzO98kN_yRQSOI0DeV/preview"
@@ -309,20 +421,20 @@
 <footer>Konatham Sreeja &nbsp;·&nbsp; Design Portfolio &nbsp;·&nbsp; All Rights Reserved</footer>
 
 <script>
-  const overlay   = document.getElementById('loading-overlay');
-  const loaderSub = document.getElementById('loader-sub');
-  const tabs      = document.querySelectorAll('.tab');
-  const panels    = document.querySelectorAll('.panel');
+  const overlay    = document.getElementById('loading-overlay');
+  const loaderSub  = document.getElementById('loader-sub');
+  const tabs       = document.querySelectorAll('.tab');
+  const panels     = document.querySelectorAll('.panel');
+  const portfolio  = document.getElementById('panel-portfolio');
 
-  // ── Lazy-load an iframe: set src from data-src when needed ──
+  // ── Helpers ──
   function loadIframe(iframe) {
-    if (!iframe.src || iframe.src === window.location.href) {
+    if (iframe && (!iframe.src || iframe.src === window.location.href)) {
       iframe.src = iframe.dataset.src;
     }
   }
 
-  // ── Show loading overlay until an iframe fires 'load' ──
-  function showLoading(iframe) {
+  function showLoader(iframe) {
     overlay.classList.remove('hidden');
     loaderSub.textContent = 'Opening document…';
     iframe.addEventListener('load', () => {
@@ -331,33 +443,62 @@
     }, { once: true });
   }
 
-  // ── Load all iframes inside a panel ──
-  function activatePanel(panel) {
-    const iframes = panel.querySelectorAll('iframe');
-    if (iframes.length === 0) return;
+  // ── Scroll-snap to a part by ID ──
+  function goToPart(id) {
+    const target = document.getElementById(id);
+    if (!target) return;
 
-    // For multi-part: load first part immediately and show overlay
-    // remaining parts load lazily via IntersectionObserver
-    const firstFrame = iframes[0];
-    if (!firstFrame.src || firstFrame.src === window.location.href) {
-      showLoading(firstFrame);
-      loadIframe(firstFrame);
+    // Load iframe lazily if not yet loaded
+    const iframe = target.querySelector('iframe');
+    if (iframe && (!iframe.src || iframe.src === window.location.href)) {
+      showLoader(iframe);
+      loadIframe(iframe);
     }
 
-    // Observe remaining iframes for lazy loading
-    if (iframes.length > 1) {
-      const io = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            const f = entry.target;
-            loadIframe(f);
-            showLoading(f);
-            io.unobserve(f);
-          }
-        });
-      }, { root: panel, rootMargin: '400px' });
+    // Scroll the portfolio panel to the target part
+    portfolio.scrollTo({ top: target.offsetTop, behavior: 'smooth' });
+  }
 
-      iframes.forEach((f, i) => { if (i > 0) io.observe(f); });
+  // ── "Continue to Part X" bar clicks ──
+  document.querySelectorAll('.next-bar').forEach(bar => {
+    bar.addEventListener('click', () => goToPart(bar.dataset.next));
+  });
+
+  // ── Sentinel IntersectionObserver:
+  //    When sentinel enters view (user scrolled outer panel near
+  //    the bottom of a part), auto-advance to next part.
+  const sentinelIO = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        goToPart(entry.target.dataset.next);
+      }
+    });
+  }, { root: portfolio, threshold: 1.0 });
+
+  document.querySelectorAll('.sentinel').forEach(s => sentinelIO.observe(s));
+
+  // ── Lazy-load next part when current part's iframe loads ──
+  //    (pre-fetch so next part is ready when user advances)
+  portfolio.querySelectorAll('.part-block').forEach((block, idx, all) => {
+    const iframe = block.querySelector('iframe');
+    if (!iframe) return;
+    iframe.addEventListener('load', () => {
+      const next = all[idx + 1];
+      if (next) {
+        const nextIframe = next.querySelector('iframe');
+        // Small delay so current part renders first
+        setTimeout(() => loadIframe(nextIframe), 1500);
+      }
+    }, { once: true });
+  });
+
+  // ── Activate a panel (used for tab switching) ──
+  function activatePanel(panel) {
+    const iframe = panel.querySelector('iframe');
+    if (!iframe) return;
+    if (!iframe.src || iframe.src === window.location.href) {
+      showLoader(iframe);
+      loadIframe(iframe);
     }
   }
 
@@ -365,20 +506,22 @@
   tabs.forEach(tab => {
     tab.addEventListener('click', () => {
       const id = tab.dataset.tab;
-
       tabs.forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
-
       panels.forEach(p => p.classList.remove('active'));
-      const targetPanel = document.getElementById(`panel-${id}`);
-      targetPanel.classList.add('active');
+      const target = document.getElementById(`panel-${id}`);
+      target.classList.add('active');
 
-      activatePanel(targetPanel);
+      // Reset portfolio scroll to top when re-entering
+      if (id === 'portfolio') portfolio.scrollTo({ top: 0 });
+      else activatePanel(target);
     });
   });
 
-  // ── Boot: load portfolio panel (active by default) ──
-  activatePanel(document.getElementById('panel-portfolio'));
+  // ── Boot: load Part 1 ──
+  const firstIframe = document.querySelector('#part-1 iframe');
+  showLoader(firstIframe);
+  loadIframe(firstIframe);
 </script>
 </body>
 </html>
