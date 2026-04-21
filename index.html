@@ -15,6 +15,7 @@
     --gold-light: #e8cfa0;
     --text:       #e8e0d5;
     --muted:      #6b6560;
+    --header-h:   62px;
   }
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -27,7 +28,7 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    overflow: hidden; /* iframe fills remaining height */
+    overflow: hidden;
   }
 
   /* ── HEADER ── */
@@ -37,7 +38,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 0 32px;
-    height: 62px;
+    height: var(--header-h);
     background: rgba(8,8,8,0.97);
     border-bottom: 1px solid var(--border);
     gap: 16px;
@@ -54,11 +55,7 @@
     white-space: nowrap;
     flex-shrink: 0;
   }
-  .brand em {
-    font-style: italic;
-    color: var(--muted);
-    font-size: 0.85em;
-  }
+  .brand em { font-style: italic; color: var(--muted); font-size: 0.85em; }
 
   /* ── TABS ── */
   nav { display: flex; gap: 4px; align-items: center; }
@@ -66,7 +63,6 @@
   .tab {
     position: relative;
     padding: 8px 20px;
-    font-family: 'Tenor Sans', sans-serif;
     font-size: 0.7rem;
     letter-spacing: 0.18em;
     text-transform: uppercase;
@@ -99,6 +95,70 @@
     overflow: hidden;
   }
 
+  /* ── PANELS (one per tab) ── */
+  .panel {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.35s;
+    overflow-y: auto;        /* scroll through stacked iframes */
+    background: var(--bg);
+  }
+  .panel.active {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  /* ── SINGLE-FRAME PANELS (Cyber Play, Quiet Erosion) ── */
+  .panel-single iframe {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+  .panel-single {
+    overflow: hidden; /* no scroll needed — Drive viewer scrolls internally */
+  }
+
+  /* ── MULTI-FRAME PANEL (Portfolio split into parts) ── */
+  .part-block {
+    position: relative;
+    width: 100%;
+    /* Each part fills the viewport height so it feels like a full viewer */
+    height: calc(100vh - var(--header-h));
+    border-bottom: 2px solid var(--border);
+    background: var(--bg);
+  }
+  .part-block iframe {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: none;
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+  .part-block iframe.loaded { opacity: 1; }
+
+  /* Part label pill */
+  .part-label {
+    position: absolute;
+    top: 10px; left: 50%;
+    transform: translateX(-50%);
+    background: rgba(8,8,8,0.82);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 16px;
+    font-size: 0.62rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    pointer-events: none;
+    z-index: 2;
+    white-space: nowrap;
+    backdrop-filter: blur(6px);
+  }
+
   /* Loading overlay */
   #loading-overlay {
     position: absolute;
@@ -109,7 +169,7 @@
     align-items: center;
     justify-content: center;
     gap: 18px;
-    z-index: 5;
+    z-index: 20;
     transition: opacity 0.5s;
     pointer-events: none;
   }
@@ -143,31 +203,15 @@
     text-transform: uppercase;
   }
 
-  /* The iframes — all stacked, only active one is visible */
-  .pdf-frame {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    border: none;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.35s;
-    background: var(--bg);
-  }
-  .pdf-frame.active {
-    opacity: 1;
-    pointer-events: all;
-  }
-
   /* ── MOBILE ── */
   @media (max-width: 640px) {
-    header { padding: 0 14px; height: 54px; gap: 8px; }
+    :root { --header-h: 54px; }
+    header { padding: 0 14px; gap: 8px; }
     .brand { font-size: 0.82rem; }
-    .tab { padding: 6px 11px; font-size: 0.62rem; letter-spacing: 0.1em; }
+    .tab { padding: 6px 10px; font-size: 0.62rem; letter-spacing: 0.1em; }
   }
   @media (max-width: 380px) {
-    .tab { padding: 5px 8px; font-size: 0.58rem; }
+    .tab { padding: 5px 7px; font-size: 0.57rem; }
   }
 
   footer {
@@ -187,90 +231,154 @@
 <header>
   <div class="brand">Konatham Sreeja <em>/ Portfolio</em></div>
   <nav id="tab-nav">
-    <div class="tab active" data-id="portfolio">Portfolio</div>
-    <div class="tab"        data-id="cyberplay">Cyber Play</div>
-    <div class="tab"        data-id="erosion">Quiet Erosion</div>
+    <div class="tab active" data-tab="portfolio">Portfolio</div>
+    <div class="tab"        data-tab="cyberplay">Cyber Play</div>
+    <div class="tab"        data-tab="erosion">Quiet Erosion</div>
   </nav>
 </header>
 
 <div id="viewer">
 
-  <!-- Loading overlay (shared) -->
+  <!-- Loading overlay -->
   <div id="loading-overlay">
     <div class="loader-title">Loading</div>
     <div class="bar-wrap"><div class="bar"></div></div>
-    <div class="loader-sub">Opening document…</div>
+    <div class="loader-sub" id="loader-sub">Opening document…</div>
   </div>
 
-  <!--
-    Google Drive /preview URLs render the full Drive viewer inside an iframe.
-    All three frames are created on first load; switching tabs is instant after that.
+  <!-- ══ PORTFOLIO PANEL — 4 stacked parts ══
+       After running split_portfolio.py, upload the 4 files to Google Drive,
+       set each to "Anyone with the link", and replace the FILE_ID placeholders below.
   -->
-  <iframe
-    id="frame-portfolio"
-    class="pdf-frame active"
-    src="https://drive.google.com/file/d/1Mp-3eR9jXLrd_3cdHtOIL-Znk_Be5fCQ/preview"
-    allow="autoplay"
-    data-id="portfolio"
-  ></iframe>
+  <div class="panel active" id="panel-portfolio">
 
-  <iframe
-    id="frame-cyberplay"
-    class="pdf-frame"
-    src=""
-    data-src="https://drive.google.com/file/d/13Gh3KXCxzmxQj5xFlYdsy-O00gpGxidY/preview"
-    allow="autoplay"
-    data-id="cyberplay"
-  ></iframe>
+    <div class="part-block">
+      <div class="part-label">Part 1 of 4</div>
+      <iframe
+        data-src="https://drive.google.com/file/d/1gFfeq11BT0VsBeSKQV2kX4XJYa1-Q-fB/preview"
+        allow="autoplay"
+      ></iframe>
+    </div>
 
-  <iframe
-    id="frame-erosion"
-    class="pdf-frame"
-    src=""
-    data-src="https://drive.google.com/file/d/1LAsf4gR3PNsLqjAzO98kN_yRQSOI0DeV/preview"
-    allow="autoplay"
-    data-id="erosion"
-  ></iframe>
+    <div class="part-block">
+      <div class="part-label">Part 2 of 4</div>
+      <iframe
+        data-src="https://drive.google.com/file/d/13ZkiP1NUqZ92DYSBw9wX8gmH3ag73KQq/preview"
+        allow="autoplay"
+      ></iframe>
+    </div>
 
-</div>
+    <div class="part-block">
+      <div class="part-label">Part 3 of 4</div>
+      <iframe
+        data-src="https://drive.google.com/file/d/1rSdtPft_QASdS5xeFaWIM_joQWxizC50/preview"
+        allow="autoplay"
+      ></iframe>
+    </div>
+
+    <div class="part-block">
+      <div class="part-label">Part 4 of 4</div>
+      <iframe
+        data-src="https://drive.google.com/file/d/1SGJTY9diIIhyGtmFmObjGQp3kaaRcVIF/preview"
+        allow="autoplay"
+      ></iframe>
+    </div>
+
+  </div><!-- /panel-portfolio -->
+
+
+  <!-- ══ CYBER PLAY — single viewer ══ -->
+  <div class="panel panel-single" id="panel-cyberplay">
+    <iframe
+      data-src="https://drive.google.com/file/d/13Gh3KXCxzmxQj5xFlYdsy-O00gpGxidY/preview"
+      allow="autoplay"
+    ></iframe>
+  </div>
+
+
+  <!-- ══ QUIET EROSION — single viewer ══ -->
+  <div class="panel panel-single" id="panel-erosion">
+    <iframe
+      data-src="https://drive.google.com/file/d/1LAsf4gR3PNsLqjAzO98kN_yRQSOI0DeV/preview"
+      allow="autoplay"
+    ></iframe>
+  </div>
+
+</div><!-- /viewer -->
 
 <footer>Konatham Sreeja &nbsp;·&nbsp; Design Portfolio &nbsp;·&nbsp; All Rights Reserved</footer>
 
 <script>
-  const overlay = document.getElementById('loading-overlay');
-  const tabs    = document.querySelectorAll('.tab');
-  const frames  = document.querySelectorAll('.pdf-frame');
+  const overlay   = document.getElementById('loading-overlay');
+  const loaderSub = document.getElementById('loader-sub');
+  const tabs      = document.querySelectorAll('.tab');
+  const panels    = document.querySelectorAll('.panel');
 
-  // Hide loading overlay once the first iframe loads
-  const firstFrame = document.getElementById('frame-portfolio');
-  firstFrame.addEventListener('load', () => {
-    overlay.classList.add('hidden');
-  });
+  // ── Lazy-load an iframe: set src from data-src when needed ──
+  function loadIframe(iframe) {
+    if (!iframe.src || iframe.src === window.location.href) {
+      iframe.src = iframe.dataset.src;
+    }
+  }
 
-  // Tab switching
+  // ── Show loading overlay until an iframe fires 'load' ──
+  function showLoading(iframe) {
+    overlay.classList.remove('hidden');
+    loaderSub.textContent = 'Opening document…';
+    iframe.addEventListener('load', () => {
+      overlay.classList.add('hidden');
+      iframe.classList.add('loaded');
+    }, { once: true });
+  }
+
+  // ── Load all iframes inside a panel ──
+  function activatePanel(panel) {
+    const iframes = panel.querySelectorAll('iframe');
+    if (iframes.length === 0) return;
+
+    // For multi-part: load first part immediately and show overlay
+    // remaining parts load lazily via IntersectionObserver
+    const firstFrame = iframes[0];
+    if (!firstFrame.src || firstFrame.src === window.location.href) {
+      showLoading(firstFrame);
+      loadIframe(firstFrame);
+    }
+
+    // Observe remaining iframes for lazy loading
+    if (iframes.length > 1) {
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const f = entry.target;
+            loadIframe(f);
+            showLoading(f);
+            io.unobserve(f);
+          }
+        });
+      }, { root: panel, rootMargin: '400px' });
+
+      iframes.forEach((f, i) => { if (i > 0) io.observe(f); });
+    }
+  }
+
+  // ── Tab switching ──
   tabs.forEach(tab => {
     tab.addEventListener('click', () => {
-      const id = tab.dataset.id;
+      const id = tab.dataset.tab;
 
-      // Update active tab
       tabs.forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
 
-      // Lazy-load iframe src on first visit
-      const targetFrame = document.querySelector(`.pdf-frame[data-id="${id}"]`);
-      if (!targetFrame.src || targetFrame.src === window.location.href) {
-        overlay.classList.remove('hidden');
-        targetFrame.src = targetFrame.dataset.src;
-        targetFrame.addEventListener('load', () => {
-          overlay.classList.add('hidden');
-        }, { once: true });
-      }
+      panels.forEach(p => p.classList.remove('active'));
+      const targetPanel = document.getElementById(`panel-${id}`);
+      targetPanel.classList.add('active');
 
-      // Show target frame, hide others
-      frames.forEach(f => f.classList.remove('active'));
-      targetFrame.classList.add('active');
+      activatePanel(targetPanel);
     });
   });
+
+  // ── Boot: load portfolio panel (active by default) ──
+  activatePanel(document.getElementById('panel-portfolio'));
 </script>
 </body>
 </html>
