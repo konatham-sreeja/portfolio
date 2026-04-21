@@ -16,11 +16,10 @@
     --text:       #e8e0d5;
     --muted:      #6b6560;
     --header-h:   62px;
-    --next-bar-h: 52px;
   }
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; }
+  html, body { height: 100%; overflow: hidden; }
 
   body {
     background: var(--bg);
@@ -29,7 +28,6 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    overflow: hidden;
   }
 
   /* ── HEADER ── */
@@ -43,7 +41,7 @@
     background: rgba(8,8,8,0.97);
     border-bottom: 1px solid var(--border);
     gap: 16px;
-    z-index: 10;
+    z-index: 100;
   }
   .brand {
     font-family: 'Cormorant Garamond', serif;
@@ -57,7 +55,7 @@
   }
   .brand em { font-style: italic; color: var(--muted); font-size: 0.85em; }
 
-  nav { display: flex; gap: 4px; align-items: center; }
+  nav { display: flex; gap: 4px; }
   .tab {
     position: relative;
     padding: 8px 20px;
@@ -68,7 +66,7 @@
     cursor: pointer;
     border: 1px solid transparent;
     border-radius: 2px;
-    transition: color .25s, border-color .25s, background .25s;
+    transition: color .2s, border-color .2s, background .2s;
     white-space: nowrap;
     user-select: none;
   }
@@ -91,6 +89,8 @@
     flex: 1;
     position: relative;
     overflow: hidden;
+    /* exact height so children can use 100% */
+    height: calc(100vh - var(--header-h));
   }
 
   /* ── PANELS ── */
@@ -99,18 +99,14 @@
     inset: 0;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.35s;
-    background: var(--bg);
+    transition: opacity 0.3s;
   }
   .panel.active {
     opacity: 1;
     pointer-events: all;
   }
 
-  /* Single-frame panels (Cyber Play, Quiet Erosion) */
-  .panel-single {
-    overflow: hidden;
-  }
+  /* Single panels */
   .panel-single iframe {
     display: block;
     width: 100%;
@@ -118,40 +114,32 @@
     border: none;
   }
 
-  /* ── PORTFOLIO MULTI-PART PANEL ── */
-  /* Outer scroll container */
+  /* ── PORTFOLIO PANEL ──
+     Scrolls vertically, snaps each part to fill the viewer exactly.
+  */
   #panel-portfolio {
     overflow-y: scroll;
-    scroll-behavior: smooth;
+    overflow-x: hidden;
     scroll-snap-type: y mandatory;
+    /* hide scrollbar visually but keep it functional */
+    scrollbar-width: none;
   }
+  #panel-portfolio::-webkit-scrollbar { display: none; }
 
-  /*
-   * Each part = iframe filling viewport + a "next" bar underneath.
-   * The scroll-snap snaps to each part-block top.
-   * The "next" bar sits below the iframe — when the user scrolls past
-   * the iframe (by dragging the scrollbar, swiping on mobile, or clicking
-   * the next-bar), the outer panel scrolls and IntersectionObserver
-   * auto-snaps to the next block.
-   */
+  /* Each part snaps to fill viewer 100% — no more, no less */
   .part-block {
-    /* iframe height + next-bar height = one scroll unit */
+    /* Exactly the viewer height = clean snap every time */
     height: calc(100vh - var(--header-h));
+    width: 100%;
     scroll-snap-align: start;
     scroll-snap-stop: always;
     position: relative;
-    display: flex;
-    flex-direction: column;
-  }
-  /* Last part has no next-bar */
-  .part-block:last-child { height: calc(100vh - var(--header-h)); }
-
-  .part-iframe-wrap {
-    flex: 1;
-    position: relative;
     overflow: hidden;
+    flex-shrink: 0;
   }
-  .part-iframe-wrap iframe {
+
+  /* iframe fills the whole part-block */
+  .part-block iframe {
     display: block;
     width: 100%;
     height: 100%;
@@ -159,94 +147,77 @@
     opacity: 0;
     transition: opacity 0.4s;
   }
-  .part-iframe-wrap iframe.loaded { opacity: 1; }
+  .part-block iframe.loaded { opacity: 1; }
 
-  /* Part label (top-center) */
+  /* ── PART LABEL (top-center) ── */
   .part-label {
     position: absolute;
-    top: 10px; left: 50%;
+    top: 12px; left: 50%;
     transform: translateX(-50%);
-    background: rgba(8,8,8,0.82);
+    background: rgba(8,8,8,0.85);
     border: 1px solid var(--border);
     border-radius: 20px;
     padding: 4px 16px;
-    font-size: 0.62rem;
+    font-size: 0.6rem;
     letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--muted);
-    pointer-events: none;
-    z-index: 2;
+    z-index: 5;
     white-space: nowrap;
-    backdrop-filter: blur(6px);
+    backdrop-filter: blur(8px);
+    pointer-events: none;
   }
 
-  /* ── NEXT-PART BAR ── */
-  /*
-   * Sits BELOW the iframe inside the same part-block flex column.
-   * Clicking it scrolls to the next part. It's always visible at the
-   * bottom when the user scrolls the outer panel past the iframe edge.
-   * On desktop it's also accessible via the scrollbar.
-   */
-  .next-bar {
-    flex-shrink: 0;
-    height: var(--next-bar-h);
+  /* ── NEXT BUTTON (bottom-center, overlaid on iframe) ──
+     Absolutely positioned INSIDE part-block so it never
+     adds any height — zero layout impact.
+  */
+  .next-btn {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
     display: flex;
     align-items: center;
-    justify-content: center;
     gap: 10px;
+    padding: 10px 24px;
+    background: rgba(8,8,8,0.88);
+    border: 1px solid var(--border);
+    border-radius: 30px;
     cursor: pointer;
-    background: #0e0e0e;
-    border-top: 1px solid var(--border);
+    backdrop-filter: blur(10px);
+    transition: background 0.2s, border-color 0.2s, transform 0.2s;
     user-select: none;
-    transition: background 0.2s;
-    position: relative;
-    overflow: hidden;
+    white-space: nowrap;
   }
-  .next-bar::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(90deg, transparent 0%, rgba(201,169,110,0.06) 50%, transparent 100%);
-    transform: translateX(-100%);
-    transition: transform 0s;
+  .next-btn:hover {
+    background: rgba(201,169,110,0.12);
+    border-color: var(--gold);
+    transform: translateX(-50%) translateY(-2px);
   }
-  .next-bar:hover::before {
-    transform: translateX(100%);
-    transition: transform 0.6s ease;
-  }
-  .next-bar:hover { background: #131313; }
-
-  .next-bar-text {
-    font-size: 0.68rem;
-    letter-spacing: 0.22em;
+  .next-btn-text {
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--muted);
     transition: color 0.2s;
   }
-  .next-bar:hover .next-bar-text { color: var(--gold); }
+  .next-btn:hover .next-btn-text { color: var(--gold); }
 
-  .next-bar-arrow {
-    font-size: 1rem;
+  .next-btn-arrow {
     color: var(--muted);
-    transition: color 0.2s, transform 0.2s;
-    animation: bounce 2s ease-in-out infinite;
+    font-size: 0.9rem;
+    transition: color 0.2s;
+    animation: nudge 2s ease-in-out infinite;
   }
-  .next-bar:hover .next-bar-arrow {
+  .next-btn:hover .next-btn-arrow {
     color: var(--gold);
     animation: none;
-    transform: translateY(3px);
   }
-  @keyframes bounce {
+  @keyframes nudge {
     0%,100% { transform: translateY(0); }
-    50%      { transform: translateY(4px); }
-  }
-
-  /* Sentinel — a 1px div right above the next-bar.
-     When it enters the viewport, we auto-snap to the next part. */
-  .sentinel {
-    height: 1px;
-    width: 100%;
-    pointer-events: none;
+    50%      { transform: translateY(3px); }
   }
 
   /* ── LOADING OVERLAY ── */
@@ -259,12 +230,13 @@
     align-items: center;
     justify-content: center;
     gap: 18px;
-    z-index: 20;
+    z-index: 50;
     transition: opacity 0.5s;
+  }
+  #loading-overlay.hidden {
+    opacity: 0;
     pointer-events: none;
   }
-  #loading-overlay.hidden { opacity: 0; }
-
   .loader-title {
     font-family: 'Cormorant Garamond', serif;
     font-weight: 300;
@@ -298,6 +270,7 @@
     header { padding: 0 14px; gap: 8px; }
     .brand { font-size: 0.82rem; }
     .tab { padding: 6px 10px; font-size: 0.62rem; letter-spacing: 0.1em; }
+    .next-btn { padding: 8px 18px; }
   }
   @media (max-width: 380px) {
     .tab { padding: 5px 7px; font-size: 0.57rem; }
@@ -334,100 +307,64 @@
     <div id="loader-sub">Opening document…</div>
   </div>
 
-  <!-- ══ PORTFOLIO: 4 scroll-snapped parts ══ -->
+  <!-- ══ PORTFOLIO ══ -->
   <div class="panel active" id="panel-portfolio">
 
-    <!-- Part 1 -->
     <div class="part-block" id="part-1">
-      <div class="part-iframe-wrap">
-        <div class="part-label">Part 1 of 4</div>
-        <iframe
-          data-src="https://drive.google.com/file/d/1gFfeq11BT0VsBeSKQV2kX4XJYa1-Q-fB/preview"
-          allow="autoplay"
-        ></iframe>
-      </div>
-      <div class="sentinel" data-next="part-2"></div>
-      <div class="next-bar" data-next="part-2">
-        <span class="next-bar-text">Continue to Part 2</span>
-        <span class="next-bar-arrow">↓</span>
+      <span class="part-label">Part 1 of 4</span>
+      <iframe data-src="https://drive.google.com/file/d/1gFfeq11BT0VsBeSKQV2kX4XJYa1-Q-fB/preview" allow="autoplay"></iframe>
+      <div class="next-btn" data-next="part-2">
+        <span class="next-btn-text">Continue · Part 2</span>
+        <span class="next-btn-arrow">↓</span>
       </div>
     </div>
 
-    <!-- Part 2 -->
     <div class="part-block" id="part-2">
-      <div class="part-iframe-wrap">
-        <div class="part-label">Part 2 of 4</div>
-        <iframe
-          data-src="https://drive.google.com/file/d/13ZkiP1NUqZ92DYSBw9wX8gmH3ag73KQq/preview"
-          allow="autoplay"
-        ></iframe>
-      </div>
-      <div class="sentinel" data-next="part-3"></div>
-      <div class="next-bar" data-next="part-3">
-        <span class="next-bar-text">Continue to Part 3</span>
-        <span class="next-bar-arrow">↓</span>
+      <span class="part-label">Part 2 of 4</span>
+      <iframe data-src="https://drive.google.com/file/d/13ZkiP1NUqZ92DYSBw9wX8gmH3ag73KQq/preview" allow="autoplay"></iframe>
+      <div class="next-btn" data-next="part-3">
+        <span class="next-btn-text">Continue · Part 3</span>
+        <span class="next-btn-arrow">↓</span>
       </div>
     </div>
 
-    <!-- Part 3 -->
     <div class="part-block" id="part-3">
-      <div class="part-iframe-wrap">
-        <div class="part-label">Part 3 of 4</div>
-        <iframe
-          data-src="https://drive.google.com/file/d/1rSdtPft_QASdS5xeFaWIM_joQWxizC50/preview"
-          allow="autoplay"
-        ></iframe>
-      </div>
-      <div class="sentinel" data-next="part-4"></div>
-      <div class="next-bar" data-next="part-4">
-        <span class="next-bar-text">Continue to Part 4</span>
-        <span class="next-bar-arrow">↓</span>
+      <span class="part-label">Part 3 of 4</span>
+      <iframe data-src="https://drive.google.com/file/d/1rSdtPft_QASdS5xeFaWIM_joQWxizC50/preview" allow="autoplay"></iframe>
+      <div class="next-btn" data-next="part-4">
+        <span class="next-btn-text">Continue · Part 4</span>
+        <span class="next-btn-arrow">↓</span>
       </div>
     </div>
 
-    <!-- Part 4 (no next-bar) -->
     <div class="part-block" id="part-4">
-      <div class="part-iframe-wrap">
-        <div class="part-label">Part 4 of 4</div>
-        <iframe
-          data-src="https://drive.google.com/file/d/1SGJTY9diIIhyGtmFmObjGQp3kaaRcVIF/preview"
-          allow="autoplay"
-        ></iframe>
-      </div>
+      <span class="part-label">Part 4 of 4</span>
+      <iframe data-src="https://drive.google.com/file/d/1SGJTY9diIIhyGtmFmObjGQp3kaaRcVIF/preview" allow="autoplay"></iframe>
+      <!-- no next-btn on last part -->
     </div>
 
-  </div><!-- /panel-portfolio -->
-
+  </div>
 
   <!-- ══ CYBER PLAY ══ -->
   <div class="panel panel-single" id="panel-cyberplay">
-    <iframe
-      data-src="https://drive.google.com/file/d/13Gh3KXCxzmxQj5xFlYdsy-O00gpGxidY/preview"
-      allow="autoplay"
-    ></iframe>
+    <iframe data-src="https://drive.google.com/file/d/13Gh3KXCxzmxQj5xFlYdsy-O00gpGxidY/preview" allow="autoplay"></iframe>
   </div>
-
 
   <!-- ══ QUIET EROSION ══ -->
   <div class="panel panel-single" id="panel-erosion">
-    <iframe
-      data-src="https://drive.google.com/file/d/1LAsf4gR3PNsLqjAzO98kN_yRQSOI0DeV/preview"
-      allow="autoplay"
-    ></iframe>
+    <iframe data-src="https://drive.google.com/file/d/1LAsf4gR3PNsLqjAzO98kN_yRQSOI0DeV/preview" allow="autoplay"></iframe>
   </div>
 
-</div><!-- /viewer -->
+</div>
 
 <footer>Konatham Sreeja &nbsp;·&nbsp; Design Portfolio &nbsp;·&nbsp; All Rights Reserved</footer>
 
 <script>
-  const overlay    = document.getElementById('loading-overlay');
-  const loaderSub  = document.getElementById('loader-sub');
-  const tabs       = document.querySelectorAll('.tab');
-  const panels     = document.querySelectorAll('.panel');
-  const portfolio  = document.getElementById('panel-portfolio');
+  const overlay   = document.getElementById('loading-overlay');
+  const loaderSub = document.getElementById('loader-sub');
+  const portfolio = document.getElementById('panel-portfolio');
 
-  // ── Helpers ──
+  // ── Load an iframe ──
   function loadIframe(iframe) {
     if (iframe && (!iframe.src || iframe.src === window.location.href)) {
       iframe.src = iframe.dataset.src;
@@ -443,85 +380,62 @@
     }, { once: true });
   }
 
-  // ── Scroll-snap to a part by ID ──
+  // ── Snap to a part block ──
   function goToPart(id) {
-    const target = document.getElementById(id);
-    if (!target) return;
+    const block = document.getElementById(id);
+    if (!block) return;
 
-    // Load iframe lazily if not yet loaded
-    const iframe = target.querySelector('iframe');
+    // Load iframe if not yet
+    const iframe = block.querySelector('iframe');
     if (iframe && (!iframe.src || iframe.src === window.location.href)) {
       showLoader(iframe);
       loadIframe(iframe);
     }
 
-    // Scroll the portfolio panel to the target part
-    portfolio.scrollTo({ top: target.offsetTop, behavior: 'smooth' });
+    // Scroll the portfolio panel — scroll-snap does the clean clip
+    portfolio.scrollTo({ top: block.offsetTop, behavior: 'smooth' });
   }
 
-  // ── "Continue to Part X" bar clicks ──
-  document.querySelectorAll('.next-bar').forEach(bar => {
-    bar.addEventListener('click', () => goToPart(bar.dataset.next));
+  // ── Next-btn clicks ──
+  document.querySelectorAll('.next-btn').forEach(btn => {
+    btn.addEventListener('click', () => goToPart(btn.dataset.next));
   });
 
-  // ── Sentinel IntersectionObserver:
-  //    When sentinel enters view (user scrolled outer panel near
-  //    the bottom of a part), auto-advance to next part.
-  const sentinelIO = new IntersectionObserver(entries => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        goToPart(entry.target.dataset.next);
-      }
-    });
-  }, { root: portfolio, threshold: 1.0 });
-
-  document.querySelectorAll('.sentinel').forEach(s => sentinelIO.observe(s));
-
-  // ── Lazy-load next part when current part's iframe loads ──
-  //    (pre-fetch so next part is ready when user advances)
-  portfolio.querySelectorAll('.part-block').forEach((block, idx, all) => {
-    const iframe = block.querySelector('iframe');
-    if (!iframe) return;
-    iframe.addEventListener('load', () => {
-      const next = all[idx + 1];
-      if (next) {
-        const nextIframe = next.querySelector('iframe');
-        // Small delay so current part renders first
-        setTimeout(() => loadIframe(nextIframe), 1500);
-      }
+  // ── Pre-fetch next part after current loads ──
+  document.querySelectorAll('.part-block').forEach((block, i, all) => {
+    block.querySelector('iframe').addEventListener('load', () => {
+      const next = all[i + 1];
+      if (next) setTimeout(() => loadIframe(next.querySelector('iframe')), 1200);
     }, { once: true });
   });
 
-  // ── Activate a panel (used for tab switching) ──
-  function activatePanel(panel) {
-    const iframe = panel.querySelector('iframe');
-    if (!iframe) return;
-    if (!iframe.src || iframe.src === window.location.href) {
-      showLoader(iframe);
-      loadIframe(iframe);
-    }
-  }
-
   // ── Tab switching ──
-  tabs.forEach(tab => {
+  document.querySelectorAll('.tab').forEach(tab => {
     tab.addEventListener('click', () => {
       const id = tab.dataset.tab;
-      tabs.forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
-      panels.forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+
       const target = document.getElementById(`panel-${id}`);
       target.classList.add('active');
 
-      // Reset portfolio scroll to top when re-entering
-      if (id === 'portfolio') portfolio.scrollTo({ top: 0 });
-      else activatePanel(target);
+      if (id === 'portfolio') {
+        portfolio.scrollTo({ top: 0, behavior: 'instant' });
+      } else {
+        const iframe = target.querySelector('iframe');
+        if (iframe && (!iframe.src || iframe.src === window.location.href)) {
+          showLoader(iframe);
+          loadIframe(iframe);
+        }
+      }
     });
   });
 
   // ── Boot: load Part 1 ──
-  const firstIframe = document.querySelector('#part-1 iframe');
-  showLoader(firstIframe);
-  loadIframe(firstIframe);
+  const part1Frame = document.querySelector('#part-1 iframe');
+  showLoader(part1Frame);
+  loadIframe(part1Frame);
 </script>
 </body>
 </html>
